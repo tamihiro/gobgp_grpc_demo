@@ -32,3 +32,5 @@ def unpack_buf(buf):
   # unpack Buf obj
   return unpack(str(buf.len)+"s", buf.value[:buf.len])[0]
 
+if __name__ == '__main__':
+  pass
