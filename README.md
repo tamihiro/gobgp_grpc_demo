@@ -4,7 +4,7 @@ Yet another gobgpd grpc client written in Python
 ## About
 Demonstrates how gobgpd rib can be controlled via grpc from Python client. 
 
-This example also takes advantage of gobgp's dynamic link library which can be loaded by a grpc client for easy serialization of arguments and decoding of responses.
+This example also takes advantage of gobgp's shared library which can be loaded by a grpc client for easy serialization of arguments and decoding of responses.
 
 ## Requirements
 
