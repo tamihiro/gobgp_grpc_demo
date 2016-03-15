@@ -33,9 +33,9 @@ protoc  -I $GOBGP_API --python_out=. --grpc_out=. --plugin=protoc-gen-grpc=`whic
 * Copy all scripts in this repository under `$GOPATH/src/github.com/osrg/gobgp/tools/grpc/python`, and run gobgpd if you haven't already.
 
 ---
-Originate 10.0.0.1/32 with the path-attribute origin igp, nexthop 192.0.2.1, and communities 65004:999,no-export:
+Originate 10.0.0.1/32 with the path-attribute origin igp (default), nexthop 192.0.2.1, and communities [65004:999, no-export]:
 ```
-$ python modpath.py 10.0.0.1/32 -o igp -n 192.0.2.1 -c 65004:999 no-export
+$ python modpath.py 10.0.0.1/32 -n 192.0.2.1 -c 65004:999 no-export
 ```
 
 Search route in global RIB:
@@ -59,7 +59,7 @@ $ python getrib.py 10.0.0.1/32
   attr type 8: communities ['65004:999', '65535:65281']
   ```
   
-Withdraw originating route:
+Withdraw an announced route:
   ```
   $ python modpath.py -d 10.0.0.1/32 -n 192.0.2.1
   ```
