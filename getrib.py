@@ -7,6 +7,7 @@ import sys
 import re
 import json
 import traceback
+import argparse
 
 _TIMEOUT_SECONDS = 10
 
@@ -42,9 +43,9 @@ def print_rib(dest):
     attr.sort(key=lambda k: str(k[0]) != 'type')
     if attr[1][0] == 'communities':
       attr[1][1][:] = map(lambda v: "{}:{}".format((int("0xffff0000",16)&v)>>16, int("0xffff",16)&v), attr[1][1])
-    print "  attr " + ": ".join(map(lambda x: "{} {}".format(*x), attr))
+    print "  attr " + ", ".join(map(lambda x: "{} {}".format(*x), attr))
 
-def run(*prefixes):
+def run(af, *prefixes):
   # either get all prefixes or search specific ones in global rib via grpc and print to stdout
   channel = implementations.insecure_channel("localhost", 50051)
   stub = gobgp_pb2.beta_create_GobgpApi_stub(channel)
@@ -53,7 +54,7 @@ def run(*prefixes):
     response_table = stub.GetRib(
         gobgp_pb2.Table(
             type=gobgp_pb2.GLOBAL, 
-            family=libgobgp.get_route_family("ipv4-unicast"), 
+            family=libgobgp.get_route_family(_AF_NAME[af]), 
             destinations=[ gobgp_pb2.Destination(prefix=p) for p in prefixes ]
             ), 
         _TIMEOUT_SECONDS
@@ -74,10 +75,13 @@ def run(*prefixes):
     sys.exit(1)
 
 def main():
-  run(*sys.argv[1:])
+  parser = argparse.ArgumentParser()
+  parser_afg = parser.add_mutually_exclusive_group()
+  parser_afg.add_argument('-4', action='store_const', dest="af", const=4, help="Address-family ipv4-unicast")
+  parser_afg.add_argument('-6', action='store_const', dest="af", const=6, help="Address-family ipv6-unicast")
+  parser.add_argument('prefix', action='store', nargs='*')
+  argopts = parser.parse_args()
+  run(argopts.af or 4, *argopts.prefix)
 
 if __name__ == '__main__':
-  if len(sys.argv) == 2 and sys.argv[1] in ('-h', '--help', '?', ):
-    print "usage:", sys.argv[0], "[prefix ... ]"
-    sys.exit()
   main()

@@ -1,4 +1,4 @@
-__all__ = [ '_PATTRS_CAP', 'libgobgp', 'Buf', 'Path', 'unpack_buf', ]
+__all__ = [ 'libgobgp', '_PATTRS_CAP', '_AF_NAME', 'Buf', 'Path', 'unpack_buf', ]
 
 from ctypes import *
 from struct import *
@@ -9,6 +9,7 @@ libgobgp = cdll.LoadLibrary(os.environ["GOPATH"] +"/src/github.com/osrg/gobgp/go
 
 # constants 
 _PATTRS_CAP = 32
+_AF_NAME = dict([(4, "ipv4-unicast"), (6, "ipv6-unicast"), ])
 
 # structs
 class Buf(Structure):
