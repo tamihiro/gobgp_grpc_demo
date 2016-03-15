@@ -4,7 +4,7 @@ Yet another gobgpd grpc client written in Python
 ## About
 Demonstrates how gobgpd rib can be controlled via grpc from Python client. 
 
-This example also takes advantage of gobgp's shared library which can be loaded by a grpc client for easy serialization of arguments and decoding of responses.
+This example also shows how to load gobgp's shared library and directly make its function calls in order to simplify serialization of request arguments and decoding of responses.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ protoc  -I $GOBGP_API --python_out=. --grpc_out=. --plugin=protoc-gen-grpc=`whic
 ---
 Originate 10.0.0.1/32 with the path-attribute origin igp, nexthop 192.0.2.1, and communities 65004:999,no-export:
 ```
-$ python modpath.py 10.0.0.1/32 -o igp -n 192.0.2.1 -c 65004:999 -c no-export
+$ python modpath.py 10.0.0.1/32 -o igp -n 192.0.2.1 -c 65004:999 no-export
 ```
 
 Search route in global RIB:
@@ -63,3 +63,11 @@ Withdraw originating route:
   ```
   $ python modpath.py -d 10.0.0.1/32 -n 192.0.2.1
   ```
+
+For more options:
+  ```
+  $ python modpath.py -h
+  ```
+
+Default address family is ipv4-unicast, and "-6" option is available for ipv6-unicast.
+Feel free to modify the code if you want to play with other address families.
