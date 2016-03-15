@@ -39,7 +39,7 @@ def main():
   parser = argparse.ArgumentParser()
   parser.add_argument('prefix', action='store')
   parser.add_argument('-d', action='store_true', default=False, dest="withdraw", help="Withdraw route")
-  parser.add_argument('-o', action='store', dest="origin", help="Origin")
+  parser.add_argument('-o', action='store', dest="origin", default="igp", help="Origin")
   parser.add_argument('-n', action='store', dest="nexthop", help="Next-hop")
   parser.add_argument('-m', action='store', type=int, dest="med", help="MED")
   parser.add_argument('-p', action='store', type=int, dest="local-pref", help="Local-preference")
