@@ -1,5 +1,6 @@
 import gobgp_pb2
 from grpc.beta import implementations
+from grpc.framework.interfaces.face.face import ExpirationError
 from cgopy import *
 from ctypes import *
 from struct import *
@@ -9,7 +10,7 @@ import json
 import traceback
 import argparse
 
-_TIMEOUT_SECONDS = 10
+_TIMEOUT_SECONDS = 2
 
 def print_rib(dest):
   # prints out all about a single gobgp_pb2.Destination object
@@ -70,9 +71,13 @@ def run(af, *prefixes):
     else:
       for pb2_dest in response_table.destinations:
         print_rib(pb2_dest)
+  except ExpirationError:
+    print >> sys.stderr, "grpc request timed out!"
   except:
     traceback.print_exc()    
-    sys.exit(1)
+  else:
+    return
+  sys.exit(-1)
 
 def main():
   parser = argparse.ArgumentParser()

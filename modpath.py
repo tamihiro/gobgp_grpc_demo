@@ -1,5 +1,6 @@
 import gobgp_pb2
 from grpc.beta import implementations
+from grpc.framework.interfaces.face.face import ExpirationError
 from cgopy import *
 from ctypes import *
 from struct import *
@@ -9,7 +10,7 @@ from uuid import UUID
 import traceback
 import argparse
 
-_TIMEOUT_SECONDS = 10
+_TIMEOUT_SECONDS = 2
 
 def run(prefix, af, withdraw=False, **kw):
   # originate or withdraw route via grpc
@@ -31,9 +32,13 @@ def run(prefix, af, withdraw=False, **kw):
     # grpc request
     res = stub.ModPath(gobgp_pb2.ModPathArguments(path=path), _TIMEOUT_SECONDS)
     print str(UUID(bytes=res.uuid))
+  except ExpirationError:
+    print >> sys.stderr, "grpc request timed out!"
   except:
-    traceback.print_exc()    
-    sys.exit(1)
+    traceback.print_exc()
+  else:
+    return
+  sys.exit(-1)
 
 def main():
   parser = argparse.ArgumentParser()
