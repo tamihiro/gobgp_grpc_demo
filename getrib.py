@@ -9,6 +9,7 @@ import re
 import json
 import traceback
 import argparse
+import socket
 
 _TIMEOUT_SECONDS = 2
 
@@ -46,9 +47,9 @@ def print_rib(dest):
       attr[1][1][:] = map(lambda v: "{}:{}".format((int("0xffff0000",16)&v)>>16, int("0xffff",16)&v), attr[1][1])
     print "  attr " + ", ".join(map(lambda x: "{} {}".format(*x), attr))
 
-def run(af, *prefixes):
+def run(af, gobgpd_addr, *prefixes):
   # either get all prefixes or search specific ones in global rib via grpc and print to stdout
-  channel = implementations.insecure_channel("localhost", 50051)
+  channel = implementations.insecure_channel(gobgpd_addr, 50051)
   stub = gobgp_pb2.beta_create_GobgpApi_stub(channel)
   try:
     # grpc request
@@ -82,11 +83,19 @@ def run(af, *prefixes):
 def main():
   parser = argparse.ArgumentParser()
   parser_afg = parser.add_mutually_exclusive_group()
-  parser_afg.add_argument('-4', action='store_const', dest="af", const=4, help="Address-family ipv4-unicast")
+  parser_afg.add_argument('-4', action='store_const', dest="af", const=4, help="Address-family ipv4-unicast (default)")
   parser_afg.add_argument('-6', action='store_const', dest="af", const=6, help="Address-family ipv6-unicast")
+  parser.add_argument('-r', action='store', default="localhost", dest="gobgpd_addr", help="GoBGPd address (default: localhost)")
   parser.add_argument('prefix', action='store', nargs='*')
   argopts = parser.parse_args()
-  run(argopts.af or 4, *argopts.prefix)
+
+  try:
+    socket.gethostbyname(argopts.gobgpd_addr)
+  except socket.gaierror, e:
+    print >> sys.stderr, "no such host:", argopts.gobgpd_addr
+    sys.exit(-1)
+
+  run(argopts.af or 4, argopts.gobgpd_addr, *argopts.prefix)
 
 if __name__ == '__main__':
   main()
