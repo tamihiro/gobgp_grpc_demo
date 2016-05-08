@@ -1,6 +1,6 @@
 import gobgp_pb2
 from grpc.beta import implementations
-from grpc.framework.interfaces.face.face import ExpirationError
+from grpc.framework.interfaces.face.face import ExpirationError, RemoteError
 from cgopy import *
 from ctypes import *
 from struct import *
@@ -47,26 +47,38 @@ def print_rib(dest):
       attr[1][1][:] = map(lambda v: "{}:{}".format((int("0xffff0000",16)&v)>>16, int("0xffff",16)&v), attr[1][1])
     print "  attr " + ", ".join(map(lambda x: "{} {}".format(*x), attr))
 
-def run(af, gobgpd_addr, *prefixes):
-  # either get all prefixes or search specific ones in global rib via grpc and print to stdout
+def run(af, gobgpd_addr, *prefixes, **kw):
+  # Get all prefixes or search specific ones given as arguments, either in RIB-Loc, RIB-In, or RIB-Out, via grpc and print to stdout
   channel = implementations.insecure_channel(gobgpd_addr, 50051)
   stub = gobgp_pb2.beta_create_GobgpApi_stub(channel)
   try:
+    table_args = dict()
+    table_args["family"] = libgobgp.get_route_family(_AF_NAME[af])
+    table_args["destinations"] =[ gobgp_pb2.Destination(prefix=p) for p in prefixes ]
+    if kw["rib_in_neighbor"] is not None:
+      table_args["type"] = gobgp_pb2.ADJ_IN
+      table_args["name"] = kw["rib_in_neighbor"]
+    elif kw["rib_out_neighbor"] is not None:
+      table_args["type"] = gobgp_pb2.ADJ_OUT
+      table_args["name"] = kw["rib_out_neighbor"]
+    else:
+      table_args["type"] = gobgp_pb2.GLOBAL
     # grpc request
-    response_table = stub.GetRib(
-        gobgp_pb2.Table(
-            type=gobgp_pb2.GLOBAL, 
-            family=libgobgp.get_route_family(_AF_NAME[af]), 
-            destinations=[ gobgp_pb2.Destination(prefix=p) for p in prefixes ]
-            ), 
-        _TIMEOUT_SECONDS
-        )
+    try:
+      response_table = stub.GetRib(
+          gobgp_pb2.Table(**table_args),
+          _TIMEOUT_SECONDS
+          )
+    except RemoteError, e:
+      print >> sys.stderr, "grpc stub method failed:", e.details
+      sys.exit(-1)
+
     if prefixes:
       for prefix in prefixes:
         try:
           i = map(lambda d: d.prefix, response_table.destinations).index(prefix)
           print_rib(response_table.destinations[i])
-        except ValueError:    
+        except ValueError:
           print prefix
           print "  not in table!"
     else:
@@ -75,7 +87,7 @@ def run(af, gobgpd_addr, *prefixes):
   except ExpirationError:
     print >> sys.stderr, "grpc request timed out!"
   except:
-    traceback.print_exc()    
+    traceback.print_exc()
   else:
     return
   sys.exit(-1)
@@ -85,17 +97,27 @@ def main():
   parser_afg = parser.add_mutually_exclusive_group()
   parser_afg.add_argument('-4', action='store_const', dest="af", const=4, help="Address-family ipv4-unicast (default)")
   parser_afg.add_argument('-6', action='store_const', dest="af", const=6, help="Address-family ipv6-unicast")
+  parser_tg = parser.add_mutually_exclusive_group()
+  parser_tg.add_argument('-l', action='store_true', dest="rib_local", help="Show local rib (default: true)")
+  parser_tg.add_argument('-i', action='store', dest="rib_in_neighbor", help="Routes received from peer")
+  parser_tg.add_argument('-o', action='store', dest="rib_out_neighbor", help="Routes advertised to peer")
   parser.add_argument('-r', action='store', default="localhost", dest="gobgpd_addr", help="GoBGPd address (default: localhost)")
   parser.add_argument('prefix', action='store', nargs='*')
   argopts = parser.parse_args()
 
   try:
-    socket.gethostbyname(argopts.gobgpd_addr)
+    for a in ['gobgpd_addr', 'rib_in_neighbor', 'rib_out_neighbor', ]:
+      if getattr(argopts, a):
+        socket.gethostbyname(getattr(argopts, a))
   except socket.gaierror, e:
-    print >> sys.stderr, "no such host:", argopts.gobgpd_addr
+    print >> sys.stderr, "no such host:", getattr(argopts, a)
     sys.exit(-1)
 
-  run(argopts.af or 4, argopts.gobgpd_addr, *argopts.prefix)
+  run(argopts.af or 4,
+      argopts.gobgpd_addr,
+      *argopts.prefix,
+      rib_in_neighbor=argopts.rib_in_neighbor,
+      rib_out_neighbor=argopts.rib_out_neighbor)
 
 if __name__ == '__main__':
   main()
