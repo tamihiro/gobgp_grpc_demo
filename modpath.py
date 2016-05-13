@@ -28,11 +28,13 @@ def run(prefix, af, gobgpd_addr, withdraw=False, **kw):
       pattrs.append(unpack_buf(pattr_p.contents))
     # path dict
     path = dict([("nlri", nlri), ("pattrs", pattrs), ])
-    if withdraw:
-      path["is_withdraw"] = True
     # grpc request
-    res = stub.ModPath(gobgp_pb2.ModPathArguments(path=path), _TIMEOUT_SECONDS)
-    print str(UUID(bytes=res.uuid))
+    if not withdraw:
+      res = stub.AddPath(gobgp_pb2.AddPathRequest(path=path), _TIMEOUT_SECONDS)
+      print str(UUID(bytes=res.uuid))
+    else:
+      path["is_withdraw"] = True
+      stub.DeletePath(gobgp_pb2.DeletePathRequest(path=path), _TIMEOUT_SECONDS)
   except ExpirationError:
     print >> sys.stderr, "grpc request timed out!"
   except:

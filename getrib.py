@@ -66,9 +66,9 @@ def run(af, gobgpd_addr, *prefixes, **kw):
     # grpc request
     try:
       response_table = stub.GetRib(
-          gobgp_pb2.Table(**table_args),
+          gobgp_pb2.GetRibRequest(table=gobgp_pb2.Table(**table_args)),
           _TIMEOUT_SECONDS
-          )
+          ).table
     except RemoteError, e:
       print >> sys.stderr, "grpc stub method failed:", e.details
       sys.exit(-1)
