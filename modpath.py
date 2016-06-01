@@ -14,34 +14,30 @@ import socket
 _TIMEOUT_SECONDS = 2
 
 def run(prefix, af, gobgpd_addr, withdraw=False, **kw):
-  # originate or withdraw route via grpc
+  joined_args = prefix + " " + " ".join(map(lambda x: "{} {}".format(*x), kw.items()))
+  serialized_path = libgobgp.serialize_path(libgobgp.get_route_family(_AF_NAME[af]), joined_args, ).contents
+  # nlri
+  nlri = unpack_buf(serialized_path.nlri)
+  # pattrs
+  pattrs = []
+  for pattr_p in serialized_path.path_attributes.contents[:serialized_path.path_attributes_len]:
+    pattrs.append(unpack_buf(pattr_p.contents))
+  # path dict
+  path = dict([("nlri", nlri), ("pattrs", pattrs), ])
+  # grpc request
   channel = implementations.insecure_channel(gobgpd_addr, 50051)
-  stub = gobgp_pb2.beta_create_GobgpApi_stub(channel)
   try:
-    joined_args = prefix + " " + " ".join(map(lambda x: "{} {}".format(*x), kw.items()))
-    serialized_path = libgobgp.serialize_path(libgobgp.get_route_family(_AF_NAME[af]), joined_args, ).contents
-    # nlri
-    nlri = unpack_buf(serialized_path.nlri)
-    # pattrs
-    pattrs = []
-    for pattr_p in serialized_path.path_attributes.contents[:serialized_path.path_attributes_len]:
-      pattrs.append(unpack_buf(pattr_p.contents))
-    # path dict
-    path = dict([("nlri", nlri), ("pattrs", pattrs), ])
-    # grpc request
-    if not withdraw:
-      res = stub.AddPath(gobgp_pb2.AddPathRequest(path=path), _TIMEOUT_SECONDS)
-      print str(UUID(bytes=res.uuid))
-    else:
-      path["is_withdraw"] = True
-      stub.DeletePath(gobgp_pb2.DeletePathRequest(path=path), _TIMEOUT_SECONDS)
+    with gobgp_pb2.beta_create_GobgpApi_stub(channel) as stub:
+      if not withdraw:
+        res = stub.AddPath(gobgp_pb2.AddPathRequest(path=path), _TIMEOUT_SECONDS)
+        print str(UUID(bytes=res.uuid))
+      else:
+        path["is_withdraw"] = True
+        res = stub.DeletePath(gobgp_pb2.DeletePathRequest(path=path), _TIMEOUT_SECONDS)
   except ExpirationError:
     print >> sys.stderr, "grpc request timed out!"
   except:
     traceback.print_exc()
-  else:
-    return
-  sys.exit(-1)
 
 def main():
   parser = argparse.ArgumentParser()

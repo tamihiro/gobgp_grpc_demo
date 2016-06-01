@@ -48,49 +48,43 @@ def print_rib(dest):
     print "  attr " + ", ".join(map(lambda x: "{} {}".format(*x), attr))
 
 def run(af, gobgpd_addr, *prefixes, **kw):
-  # Get all prefixes or search specific ones given as arguments, either in RIB-Loc, RIB-In, or RIB-Out, via grpc and print to stdout
+  table_args = dict()
+  table_args["family"] = libgobgp.get_route_family(_AF_NAME[af])
+  table_args["destinations"] =[ gobgp_pb2.Destination(prefix=p) for p in prefixes ]
+  if kw["rib_in_neighbor"] is not None:
+    table_args["type"] = gobgp_pb2.ADJ_IN
+    table_args["name"] = kw["rib_in_neighbor"]
+  elif kw["rib_out_neighbor"] is not None:
+    table_args["type"] = gobgp_pb2.ADJ_OUT
+    table_args["name"] = kw["rib_out_neighbor"]
+  else:
+    table_args["type"] = gobgp_pb2.GLOBAL
+  # grpc request
   channel = implementations.insecure_channel(gobgpd_addr, 50051)
-  stub = gobgp_pb2.beta_create_GobgpApi_stub(channel)
   try:
-    table_args = dict()
-    table_args["family"] = libgobgp.get_route_family(_AF_NAME[af])
-    table_args["destinations"] =[ gobgp_pb2.Destination(prefix=p) for p in prefixes ]
-    if kw["rib_in_neighbor"] is not None:
-      table_args["type"] = gobgp_pb2.ADJ_IN
-      table_args["name"] = kw["rib_in_neighbor"]
-    elif kw["rib_out_neighbor"] is not None:
-      table_args["type"] = gobgp_pb2.ADJ_OUT
-      table_args["name"] = kw["rib_out_neighbor"]
-    else:
-      table_args["type"] = gobgp_pb2.GLOBAL
-    # grpc request
-    try:
+    with gobgp_pb2.beta_create_GobgpApi_stub(channel) as stub:
       response_table = stub.GetRib(
           gobgp_pb2.GetRibRequest(table=gobgp_pb2.Table(**table_args)),
           _TIMEOUT_SECONDS
           ).table
-    except RemoteError, e:
-      print >> sys.stderr, "grpc stub method failed:", e.details
-      sys.exit(-1)
-
+  except ExpirationError:
+    print >> sys.stderr, "grpc request timed out!"
+  except RemoteError, e:
+    print >> sys.stderr, "grpc stub method failed:", e.details
+  except:
+    traceback.print_exc()
+  else:
     if prefixes:
       for prefix in prefixes:
         try:
           i = map(lambda d: d.prefix, response_table.destinations).index(prefix)
           print_rib(response_table.destinations[i])
         except ValueError:
-          print prefix
-          print "  not in table!"
+          print >> sys.stderr, prefix
+          print >> sys.stderr, "  not in table!"
     else:
       for pb2_dest in response_table.destinations:
         print_rib(pb2_dest)
-  except ExpirationError:
-    print >> sys.stderr, "grpc request timed out!"
-  except:
-    traceback.print_exc()
-  else:
-    return
-  sys.exit(-1)
 
 def main():
   parser = argparse.ArgumentParser()
