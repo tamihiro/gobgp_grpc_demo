@@ -43,7 +43,7 @@ def print_rib(dest):
   # format and print decoded_path
   for attr in [ attr.items() for attr in sorted(json.loads(decoded_path).get('attrs', []), key=lambda k: k['type']) ]:
     attr.sort(key=lambda k: str(k[0]) != 'type')
-    if attr[1][0] == 'communities':
+    if len(attr) > 1 and attr[1][0] == 'communities':
       attr[1][1][:] = map(lambda v: "{}:{}".format((int("0xffff0000",16)&v)>>16, int("0xffff",16)&v), attr[1][1])
     print "  attr " + ", ".join(map(lambda x: "{} {}".format(*x), attr))
 
