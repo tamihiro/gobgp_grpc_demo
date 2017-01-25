@@ -14,8 +14,9 @@ import socket
 _TIMEOUT_SECONDS = 2
 
 def run(prefix, af, gobgpd_addr, withdraw=False, **kw):
+  route_family = libgobgp.get_route_family(_AF_NAME[af])
   joined_args = prefix + " " + " ".join(map(lambda x: "{} {}".format(*x), kw.items()))
-  serialized_path = libgobgp.serialize_path(libgobgp.get_route_family(_AF_NAME[af]), joined_args, ).contents
+  serialized_path = libgobgp.serialize_path(route_family, joined_args, ).contents
   # nlri
   nlri = unpack_buf(serialized_path.nlri)
   # pattrs
@@ -23,7 +24,7 @@ def run(prefix, af, gobgpd_addr, withdraw=False, **kw):
   for pattr_p in serialized_path.path_attributes.contents[:serialized_path.path_attributes_len]:
     pattrs.append(unpack_buf(pattr_p.contents))
   # path dict
-  path = dict([("nlri", nlri), ("pattrs", pattrs), ])
+  path = dict([("family", route_family), ("nlri", nlri), ("pattrs", pattrs), ])
   # grpc request
   channel = implementations.insecure_channel(gobgpd_addr, 50051)
   try:
