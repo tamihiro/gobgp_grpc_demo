@@ -31,7 +31,9 @@ def run(prefix, af, gobgpd_addr, withdraw=False, **kw):
     with gobgp_pb2.beta_create_GobgpApi_stub(channel) as stub:
       if not withdraw:
         res = stub.AddPath(gobgp_pb2.AddPathRequest(path=path), _TIMEOUT_SECONDS)
-        print str(UUID(bytes=res.uuid))
+        # AddPathResponse uuid seems to have become empty since uuid became a member of Path structure.
+        if res.uuid:
+          print str(UUID(bytes=res.uuid))
       else:
         path["is_withdraw"] = True
         res = stub.DeletePath(gobgp_pb2.DeletePathRequest(path=path), _TIMEOUT_SECONDS)

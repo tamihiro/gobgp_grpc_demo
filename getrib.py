@@ -4,6 +4,7 @@ from grpc.framework.interfaces.face.face import ExpirationError, RemoteError
 from cgopy import *
 from ctypes import *
 from struct import *
+from uuid import UUID
 import sys
 import re
 import json
@@ -34,6 +35,8 @@ def print_rib(dest):
         p_a.len = c_int(len(p_a_v))
         pattrs.append(pointer(p_a))
       path.path_attributes = pointer((POINTER(Buf) * _PATTRS_CAP)(*pattrs))
+    elif attr == "uuid":
+      print "  {}: {}".format(attr, UUID(bytes=getattr(dest.paths._values[0], attr)))
     else:
       # print everything other than nlri and path_attributers
       print "  {}: {}".format(attr, getattr(dest.paths._values[0], attr))
