@@ -1,4 +1,4 @@
-__all__ = [ 'libgobgp', '_PATTRS_CAP', '_AF_NAME', 'Buf', 'Path', 'unpack_buf', ]
+__all__ = [ 'libgobgp', '_PATTRS_CAP', '_AF_NAME', 'Buf', 'Path', 'unpack_buf', 'protobuf_obj_attrs', ]
 
 from ctypes import *
 from struct import *
@@ -32,6 +32,11 @@ libgobgp.decode_path.argtypes = (POINTER(Path), )
 def unpack_buf(buf):
   # unpack Buf obj
   return unpack(str(buf.len)+"s", buf.value[:buf.len])[0]
+
+def protobuf_obj_attrs(o):
+  # return a list of protobuf object attribute names 
+  slice_ind = -1 * len('_FIELD_NUMBER')
+  return [ attr[:slice_ind].lower() for attr in dir(o) if attr.endswith('_FIELD_NUMBER') ]
 
 if __name__ == '__main__':
   pass
