@@ -1,5 +1,6 @@
 import gobgp_pb2
-from grpc.beta import implementations
+import gobgp_pb2_grpc
+import grpc
 from grpc.framework.interfaces.face.face import ExpirationError, RemoteError
 from cgopy import *
 from ctypes import *
@@ -64,10 +65,10 @@ def run(af, gobgpd_addr, *prefixes, **kw):
   else:
     table_args["type"] = gobgp_pb2.GLOBAL
   # grpc request
-  channel = implementations.insecure_channel(gobgpd_addr, 50051)
+  channel = grpc.insecure_channel(gobgpd_addr + ':50051')
   try:
-    with gobgp_pb2.beta_create_GobgpApi_stub(channel) as stub:
-      response_table = stub.GetRib(
+    stub = gobgp_pb2_grpc.GobgpApiStub(channel)
+    response_table = stub.GetRib(
           gobgp_pb2.GetRibRequest(table=gobgp_pb2.Table(**table_args)),
           _TIMEOUT_SECONDS
           ).table

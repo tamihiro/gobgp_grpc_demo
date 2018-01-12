@@ -1,5 +1,6 @@
 import gobgp_pb2
-from grpc.beta import implementations
+import gobgp_pb2_grpc
+import grpc
 from grpc.framework.interfaces.face.face import ExpirationError
 from cgopy import *
 from ctypes import *
@@ -26,17 +27,17 @@ def run(prefix, af, gobgpd_addr, withdraw=False, **kw):
   # path dict
   path = dict([("family", route_family), ("nlri", nlri), ("pattrs", pattrs), ])
   # grpc request
-  channel = implementations.insecure_channel(gobgpd_addr, 50051)
+  channel = grpc.insecure_channel(gobgpd_addr + ':50051')
   try:
-    with gobgp_pb2.beta_create_GobgpApi_stub(channel) as stub:
-      if not withdraw:
-        res = stub.AddPath(gobgp_pb2.AddPathRequest(path=path), _TIMEOUT_SECONDS)
-        # AddPathResponse uuid seems to have become empty since uuid became a member of Path structure.
-        if res.uuid:
-          print str(UUID(bytes=res.uuid))
-      else:
-        path["is_withdraw"] = True
-        res = stub.DeletePath(gobgp_pb2.DeletePathRequest(path=path), _TIMEOUT_SECONDS)
+    stub = gobgp_pb2_grpc.GobgpApiStub(channel)
+    if not withdraw:
+      res = stub.AddPath(gobgp_pb2.AddPathRequest(path=path), _TIMEOUT_SECONDS)
+      # AddPathResponse uuid seems to have become empty since uuid became a member of Path structure.
+      if res.uuid:
+        print str(UUID(bytes=res.uuid))
+    else:
+      path["is_withdraw"] = True
+      res = stub.DeletePath(gobgp_pb2.DeletePathRequest(path=path), _TIMEOUT_SECONDS)
   except ExpirationError:
     print >> sys.stderr, "grpc request timed out!"
   except:
