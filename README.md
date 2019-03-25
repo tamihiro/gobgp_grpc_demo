@@ -4,7 +4,7 @@ Yet another gobgpd grpc client written in Python
 ## Updates
 The demo program here works with GoBGP up until 1.26, but not any more with recent versions. The GoBGP development team has decided to renew its API by leveraging protobuf structure, and it will hopefully fixed in 2.0. See discussion in [this issue](https://github.com/osrg/gobgp/issues/1763).
 
-A working demo for the newer GoBGP 2.0 is [here](https://github.com/tamihiro/gobgp_grpc_demo).
+A working demo for the newer GoBGP 2.0 is [here](https://github.com/tamihiro/gobgp2_grpc_demo).
 
 ## About
 Demonstrates how gobgpd rib can be controlled via grpc from Python client. 
